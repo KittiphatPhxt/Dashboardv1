@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบแดชบอร์ดวิเคราะห์ยอดขาย</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <script src="tailwind-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/motion@10.16.2/dist/motion.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="antialiased">
+
+    <!-- แถบเมนูด้านบน (Navigation Bar) -->
+    <nav class="sticky top-0 z-50 shadow-sm backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-blue-600 flex items-center justify-center text-white shadow-md shadow-sky-500/25">
+                        <i data-lucide="bar-chart-2" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg md:text-xl font-bold tracking-tight text-sky-950">แดชบอร์ดวิเคราะห์ยอดขาย
+                        </h1>
+                        <p class="text-xs text-sky-700">ระบบรายงานและวิเคราะห์ข้อมูลยอดขายเพื่อการตัดสินใจเชิงธุรกิจ</p>
+                    </div>
+                </div>
+
+                <div class="hidden md:flex items-center gap-2">
+                    <div class="flex items-baseline space-x-1 text-sm font-medium mr-2">
+                        <a href="#overview" class="hover:text-sky-600 px-3 py-1.5 rounded-lg transition">ภาพรวม</a>
+                        <a href="#products" class="hover:text-sky-600 px-3 py-1.5 rounded-lg transition">สินค้า</a>
+                        <a href="#strategy" class="hover:text-sky-600 px-3 py-1.5 rounded-lg transition">กลยุทธ์</a>
+                        <a href="#branches" class="hover:text-sky-600 px-3 py-1.5 rounded-lg transition">สาขา</a>
+                        <a href="#categories" class="hover:text-sky-600 px-3 py-1.5 rounded-lg transition">หมวดหมู่</a>
+                        <a href="#analysis"
+                            class="hover:text-sky-600 px-3 py-1.5 rounded-lg transition">ข้อมูลเชิงลึก</a>
+                        <a href="#transactions"
+                            class="hover:text-sky-600 px-3 py-1.5 rounded-lg transition">รายการขาย</a>
+                    </div>
+
+                    <button id="btn-export-pdf" class="btn h-[38px] text-sm ml-2">
+                        <i data-lucide="printer" class="w-4 h-4"></i> พิมพ์รายงาน PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+        <!-- สรุปการตรวจสอบคุณภาพข้อมูล -->
+        <div id="data-validation-summary" class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl shadow-sm">
+            <div class="flex items-start">
+                <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-500 mt-0.5 mr-3"></i>
+                <div>
+                    <h3 class="text-sm font-bold text-amber-800">สรุปการตรวจสอบคุณภาพข้อมูล</h3>
+                    <div id="validation-details"
+                        class="mt-1 text-sm text-amber-700 grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <!-- กำหนดโดย JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- แถบตัวกรองข้อมูล (Filter Bar) -->
+        <div class="card flex flex-wrap gap-4 items-end">
+            <div class="flex-1 min-w-[150px]">
+                <label
+                    class="block text-xs font-semibold text-sky-900 mb-1.5 uppercase tracking-wider">วันที่เริ่มต้น</label>
+                <input type="date" id="filter-start-date" class="w-full text-sm">
+            </div>
+            <div class="flex-1 min-w-[150px]">
+                <label
+                    class="block text-xs font-semibold text-sky-900 mb-1.5 uppercase tracking-wider">วันที่สิ้นสุด</label>
+                <input type="date" id="filter-end-date" class="w-full text-sm">
+            </div>
+            <div class="flex-1 min-w-[150px]">
+                <label class="block text-xs font-semibold text-sky-900 mb-1.5 uppercase tracking-wider">สาขา</label>
+                <select id="filter-branch" class="w-full text-sm">
+                    <option value="all">ทุกสาขา</option>
+                </select>
+            </div>
+            <div class="flex-1 min-w-[150px]">
+                <label class="block text-xs font-semibold text-sky-900 mb-1.5 uppercase tracking-wider">หมวดหมู่</label>
+                <select id="filter-category" class="w-full text-sm">
+                    <option value="all">ทุกหมวดหมู่</option>
+                </select>
+            </div>
+            <div class="flex-1 min-w-[150px]">
+                <label class="block text-xs font-semibold text-sky-900 mb-1.5 uppercase tracking-wider">สินค้า</label>
+                <select id="filter-product" class="w-full text-sm">
+                    <option value="all">ทุกสินค้า</option>
+                </select>
+            </div>
+            <div>
+                <button id="btn-reset" class="btn-outline h-[42px] text-sm">
+                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i> ล้างตัวกรอง
+                </button>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2 text-sm text-sky-800 font-medium">
+            <i data-lucide="calendar" class="w-4 h-4 text-sky-600"></i>
+            <span id="date-range-display">กำลังโหลดข้อมูลวันที่...</span>
+        </div>
+
+        <!-- ความคืบหน้าเป้าหมายยอดขาย -->
+        <div class="card mb-4 mt-4">
+            <div class="flex justify-between items-end mb-2.5">
+                <div>
+                    <h3 class="text-sm font-semibold text-sky-900 uppercase tracking-wide">ความคืบหน้าเป้าหมายยอดขาย
+                    </h3>
+                    <div class="text-2xl font-bold text-sky-950 mt-1" id="target-revenue-text">฿0 / ฿0</div>
+                </div>
+                <div class="text-right">
+                    <span class="text-2xl font-bold text-sky-600" id="target-pct">0%</span>
+                </div>
+            </div>
+            <div class="w-full bg-sky-100 rounded-full h-3.5 overflow-hidden p-0.5">
+                <div id="target-progress-bar"
+                    class="bg-gradient-to-r from-sky-400 via-sky-500 to-blue-600 h-2.5 rounded-full transition-all duration-1000 shadow-[0_0_12px_rgba(14,165,233,0.5)]"
+                    style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- การ์ดตัวชี้วัดหลัก (KPIs) -->
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div class="kpi-card">
+                <div class="text-xs font-semibold text-sky-800 mb-1 uppercase tracking-wider">รายได้รวม</div>
+                <div id="kpi-revenue" class="text-2xl font-bold text-sky-950">฿0.00</div>
+                <div id="kpi-revenue-trend" class="kpi-trend text-xs mt-2 font-medium"></div>
+            </div>
+            <div class="kpi-card">
+                <div class="text-xs font-semibold text-sky-800 mb-1 uppercase tracking-wider">กำไรขั้นต้น</div>
+                <div id="kpi-profit" class="text-2xl font-bold text-emerald-600">฿0.00</div>
+                <div id="kpi-profit-trend" class="kpi-trend text-xs mt-2 font-medium"></div>
+            </div>
+            <div class="kpi-card">
+                <div class="text-xs font-semibold text-sky-800 mb-1 uppercase tracking-wider">จำนวนหน่วยขาย</div>
+                <div id="kpi-units" class="text-2xl font-bold text-blue-700">0</div>
+                <div id="kpi-units-trend" class="kpi-trend text-xs mt-2 font-medium"></div>
+            </div>
+            <div class="kpi-card">
+                <div class="text-xs font-semibold text-sky-800 mb-1 uppercase tracking-wider">จำนวนรายการขาย</div>
+                <div id="kpi-transactions" class="text-2xl font-bold text-sky-800">0</div>
+                <div id="kpi-tx-trend" class="kpi-trend text-xs mt-2 font-medium"></div>
+            </div>
+            <div class="kpi-card">
+                <div class="text-xs font-semibold text-sky-800 mb-1 uppercase tracking-wider">อัตรากำไรขั้นต้น</div>
+                <div id="kpi-margin" class="text-2xl font-bold text-sky-600">0.0%</div>
+            </div>
+            <div class="kpi-card">
+                <div class="text-xs font-semibold text-sky-800 mb-1 uppercase tracking-wider">ยอดขายเฉลี่ย/รายการ</div>
+                <div id="kpi-avg-sales" class="text-2xl font-bold text-cyan-700">฿0.00</div>
+            </div>
+        </div>
+
+        <!-- ส่วนที่ 1: ภาพรวมผลการดำเนินงานยอดขาย -->
+        <section id="overview">
+            <h2 class="text-xl font-bold text-sky-950 mb-4 flex items-center gap-2">
+                <i data-lucide="trending-up" class="w-5 h-5 text-sky-600"></i> ภาพรวมผลการดำเนินงานยอดขาย
+            </h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="card h-[400px]">
+                    <h3 class="text-sm font-semibold text-sky-900 mb-4 uppercase tracking-wide">แนวโน้มรายได้รายวัน</h3>
+                    <div class="relative h-[320px] w-full">
+                        <canvas id="chart-revenue-trend"></canvas>
+                    </div>
+                </div>
+                <div class="card h-[400px]">
+                    <h3 class="text-sm font-semibold text-sky-900 mb-4 uppercase tracking-wide">
+                        เปรียบเทียบรายได้และกำไรขั้นต้น</h3>
+                    <div class="relative h-[320px] w-full">
+                        <canvas id="chart-profit-trend"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ส่วนที่ 2: วิเคราะห์ประสิทธิภาพสินค้า -->
+        <section id="products">
+            <h2 class="text-xl font-bold text-sky-950 mb-4 flex items-center gap-2">
+                <i data-lucide="shopping-bag" class="w-5 h-5 text-sky-600"></i> วิเคราะห์ประสิทธิภาพสินค้า
+            </h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div class="card h-[400px]">
+                    <h3 class="text-sm font-semibold text-sky-900 mb-4 uppercase tracking-wide">10
+                        อันดับสินค้าที่ทำรายได้สูงสุด</h3>
+                    <div class="relative h-[320px] w-full">
+                        <canvas id="chart-top-revenue"></canvas>
+                    </div>
+                </div>
+                <div class="card h-[400px]">
+                    <h3 class="text-sm font-semibold text-sky-900 mb-4 uppercase tracking-wide">10
+                        อันดับสินค้าที่ทำกำไรสูงสุด</h3>
+                    <div class="relative h-[320px] w-full">
+                        <canvas id="chart-top-profit"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
+                    <h3 class="text-lg font-bold text-sky-950">รายละเอียดสินค้าและอัตราทำกำไร</h3>
+                    <input type="text" id="search-product" placeholder="ค้นหาชื่อสินค้า หรือหมวดหมู่..."
+                        class="text-sm w-72">
+                </div>
+                <div class="table-container">
+                    <table class="w-full text-sm text-left" id="table-products">
+                        <thead>
+                            <tr>
+                                <th data-sort="rank" class="w-20">อันดับ</th>
+                                <th data-sort="product">ชื่อสินค้า</th>
+                                <th data-sort="category">หมวดหมู่</th>
+                                <th data-sort="units" class="text-right">จำนวนขาย</th>
+                                <th data-sort="revenue" class="text-right">รายได้</th>
+                                <th data-sort="cost" class="text-right">ต้นทุนรวม</th>
+                                <th data-sort="profit" class="text-right">กำไรขั้นต้น</th>
+                                <th data-sort="margin" class="text-right">อัตรากำไร (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody><!-- กำหนดโดย JavaScript --></tbody>
+                    </table>
+                </div>
+                <div class="flex justify-between items-center mt-4 flex-wrap gap-2">
+                    <div class="text-sm text-sky-800" id="product-page-info">กำลังแสดงข้อมูล...</div>
+                    <div class="pagination" id="product-pagination"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ส่วนที่ 3: วิเคราะห์กลยุทธ์สินค้าและพฤติกรรมการขาย -->
+        <section id="strategy">
+            <h2 class="text-xl font-bold text-sky-950 mb-4 flex items-center gap-2">
+                <i data-lucide="target" class="w-5 h-5 text-sky-600"></i> วิเคราะห์กลยุทธ์สินค้าและพฤติกรรมการขาย
+            </h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div class="card h-[450px]">
+                    <h3 class="text-sm font-semibold text-sky-900 mb-1 uppercase tracking-wide">เมทริกซ์กลยุทธ์สินค้า
+                        (ปริมาณขาย เทียบกับ อัตรากำไร)</h3>
+                    <p class="text-xs text-sky-700/80 mb-4">ค้นหากลุ่มสินค้าดาวรุ่งทำกำไรสูง (ขวาบน)
+                        และสินค้าที่ควรพิจารณาปรับราคากลยุทธ์ (ซ้ายล่าง)</p>
+                    <div class="relative h-[340px] w-full">
+                        <canvas id="chart-bubble"></canvas>
+                    </div>
+                </div>
+                <div class="card h-[450px]">
+                    <h3 class="text-sm font-semibold text-sky-900 mb-4 uppercase tracking-wide">
+                        ยอดขายจำแนกตามวันในสัปดาห์</h3>
+                    <div class="relative h-[360px] w-full">
+                        <canvas id="chart-dow"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ส่วนที่ 4: วิเคราะห์ประสิทธิภาพรายสาขา -->
+        <section id="branches">
+            <h2 class="text-xl font-bold text-sky-950 mb-4 flex items-center gap-2">
+                <i data-lucide="store" class="w-5 h-5 text-sky-600"></i> วิเคราะห์ประสิทธิภาพรายสาขา
+            </h2>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="card lg:col-span-2 h-[450px]">
+                    <h3 class="text-sm font-semibold text-sky-900 mb-4 uppercase tracking-wide">
+                        รายได้และกำไรขั้นต้นจำแนกตามสาขา</h3>
+                    <div class="relative h-[360px] w-full">
+                        <canvas id="chart-branch-perf"></canvas>
+                    </div>
+                </div>
+                <div class="card lg:col-span-1 overflow-y-auto max-h-[450px]">
+                    <h3 class="text-sm font-semibold text-sky-900 mb-4 uppercase tracking-wide">อันดับผลการดำเนินงานสาขา
+                    </h3>
+                    <div id="branch-ranking-container" class="space-y-3">
+                        <!-- กำหนดโดย JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-6">
+                <div class="table-container">
+                    <table class="w-full text-sm text-left" id="table-branches">
+                        <thead>
+                            <tr>
+                                <th>สาขา</th>
+                                <th class="text-right">จำนวนรายการ</th>
+                                <th class="text-right">จำนวนหน่วยขาย</th>
+                                <th class="text-right">รายได้</th>
+                                <th class="text-right">ต้นทุนรวม</th>
+                                <th class="text-right">กำไรขั้นต้น</th>
+                                <th class="text-right">อัตรากำไร (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody><!-- กำหนดโดย JavaScript --></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ส่วนที่ 5: วิเคราะห์ตามหมวดหมู่สินค้า -->
+        <section id="categories">
+            <h2 class="text-xl font-bold text-sky-950 mb-4 flex items-center gap-2">
+                <i data-lucide="pie-chart" class="w-5 h-5 text-sky-600"></i> วิเคราะห์ตามหมวดหมู่สินค้า
+            </h2>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                <div class="card h-[350px]">
+                    <h3 class="text-sm font-semibold text-sky-900 mb-2 uppercase tracking-wide text-center">
+                        สัดส่วนรายได้ตามหมวดหมู่</h3>
+                    <div class="relative h-[280px] w-full flex justify-center">
+                        <canvas id="chart-category-donut"></canvas>
+                    </div>
+                </div>
+                <div class="card lg:col-span-2 h-[350px]">
+                    <h3 class="text-sm font-semibold text-sky-900 mb-2 uppercase tracking-wide">
+                        กำไรขั้นต้นจำแนกตามหมวดหมู่</h3>
+                    <div class="relative h-[280px] w-full">
+                        <canvas id="chart-category-bar"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="table-container">
+                    <table class="w-full text-sm text-left" id="table-categories">
+                        <thead>
+                            <tr>
+                                <th>หมวดหมู่</th>
+                                <th class="text-right">จำนวนหน่วยขาย</th>
+                                <th class="text-right">รายได้</th>
+                                <th class="text-right">ต้นทุนรวม</th>
+                                <th class="text-right">กำไรขั้นต้น</th>
+                                <th class="text-right">อัตรากำไร (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody><!-- กำหนดโดย JavaScript --></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ส่วนที่ 6: ข้อมูลเชิงลึกและดัชนีชี้วัดธุรกิจ -->
+        <section id="analysis">
+            <h2 class="text-xl font-bold text-sky-950 mb-4 flex items-center gap-2">
+                <i data-lucide="sparkles" class="w-5 h-5 text-sky-600"></i> ข้อมูลเชิงลึกและดัชนีชี้วัดธุรกิจ
+            </h2>
+
+            <!-- แผนผังความหนาแน่นยอดขายรายวัน -->
+            <div class="card mb-6">
+                <h3 class="text-sm font-semibold text-sky-900 mb-4 uppercase tracking-wide">
+                    แผนผังความหนาแน่นยอดขายรายวัน</h3>
+                <div class="overflow-x-auto">
+                    <div id="heatmap-container" class="min-w-[800px] flex gap-1 pb-4">
+                        <!-- กำหนดโดย JavaScript -->
+                    </div>
+                </div>
+                <div class="flex justify-end items-center gap-2 text-xs text-sky-800 mt-2 font-medium">
+                    <span>ยอดขายน้อย</span>
+                    <div class="w-4 h-4 bg-sky-100 rounded border border-sky-200" title="ยอดขายน้อย"></div>
+                    <div class="w-4 h-4 bg-sky-300 rounded border border-sky-300"></div>
+                    <div class="w-4 h-4 bg-sky-500 rounded border border-sky-500"></div>
+                    <div class="w-4 h-4 bg-sky-700 rounded border border-sky-700"></div>
+                    <div class="w-4 h-4 bg-sky-950 rounded border border-sky-950" title="ยอดขายมาก"></div>
+                    <span>ยอดขายมาก</span>
+                </div>
+            </div>
+
+            <!-- ตารางไขว้เปรียบเทียบ -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div class="card">
+                    <h3 class="text-sm font-semibold text-sky-900 mb-4 uppercase tracking-wide">ตารางไขว้: สาขา ×
+                        หมวดหมู่สินค้า (รายได้รวม)</h3>
+                    <div class="table-container">
+                        <table class="w-full text-sm text-left" id="table-matrix-branch-cat">
+                            <!-- กำหนดโดย JavaScript -->
+                        </table>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3 class="text-sm font-semibold text-sky-900 mb-4 uppercase tracking-wide">ตารางไขว้: สินค้า × สาขา
+                        (จำนวนหน่วยขาย)</h3>
+                    <div class="table-container max-h-[400px] overflow-y-auto">
+                        <table class="w-full text-sm text-left" id="table-matrix-prod-branch">
+                            <!-- กำหนดโดย JavaScript -->
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- การ์ดไฮไลต์ข้อมูลเชิงลึก -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                <div class="insight-card">
+                    <div class="text-sky-700 text-xs font-semibold uppercase tracking-wider mb-1">สินค้าขายดีที่สุด
+                        (จำนวนหน่วย)</div>
+                    <div id="insight-best-units" class="text-xl font-bold text-sky-950 truncate">-</div>
+                    <div id="insight-best-units-val" class="text-sm text-sky-600 font-medium mt-1">-</div>
+                </div>
+                <div class="insight-card">
+                    <div class="text-sky-700 text-xs font-semibold uppercase tracking-wider mb-1">
+                        สินค้าสร้างรายได้สูงสุด</div>
+                    <div id="insight-best-rev" class="text-xl font-bold text-emerald-600 truncate">-</div>
+                    <div id="insight-best-rev-val" class="text-sm text-sky-800 font-medium mt-1">-</div>
+                </div>
+                <div class="insight-card">
+                    <div class="text-sky-700 text-xs font-semibold uppercase tracking-wider mb-1">สินค้าทำกำไรสูงสุด
+                    </div>
+                    <div id="insight-best-prof" class="text-xl font-bold text-blue-700 truncate">-</div>
+                    <div id="insight-best-prof-val" class="text-sm text-sky-800 font-medium mt-1">-</div>
+                </div>
+                <div class="insight-card">
+                    <div class="text-sky-700 text-xs font-semibold uppercase tracking-wider mb-1">สาขาที่ทำยอดขายสูงสุด
+                    </div>
+                    <div id="insight-best-branch" class="text-xl font-bold text-amber-600 truncate">-</div>
+                    <div id="insight-best-branch-val" class="text-sm text-sky-800 font-medium mt-1">-</div>
+                </div>
+                <div class="insight-card">
+                    <div class="text-sky-700 text-xs font-semibold uppercase tracking-wider mb-1">
+                        สินค้าที่มีอัตรากำไรสูงสุด</div>
+                    <div id="insight-best-margin" class="text-xl font-bold text-cyan-600 truncate">-</div>
+                    <div id="insight-best-margin-val" class="text-sm text-sky-800 font-medium mt-1">-</div>
+                </div>
+                <div class="insight-card">
+                    <div class="text-sky-700 text-xs font-semibold uppercase tracking-wider mb-1">วันที่มียอดขายดีที่สุด
+                    </div>
+                    <div id="insight-best-day" class="text-xl font-bold text-indigo-600 truncate">-</div>
+                    <div id="insight-best-day-val" class="text-sm text-sky-800 font-medium mt-1">-</div>
+                </div>
+            </div>
+
+            <!-- ดัชนีประสิทธิภาพการขาย -->
+            <h3 class="text-lg font-bold text-sky-950 mb-4">ดัชนีประสิทธิภาพการขาย</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="card text-center p-4">
+                    <div class="text-sky-800 text-xs font-semibold uppercase mb-1">ราคาขายเฉลี่ยต่อหน่วย</div>
+                    <div id="eff-asp" class="text-lg font-bold text-sky-950">-</div>
+                </div>
+                <div class="card text-center p-4">
+                    <div class="text-sky-800 text-xs font-semibold uppercase mb-1">ต้นทุนเฉลี่ยต่อหน่วย</div>
+                    <div id="eff-acu" class="text-lg font-bold text-rose-600">-</div>
+                </div>
+                <div class="card text-center p-4">
+                    <div class="text-sky-800 text-xs font-semibold uppercase mb-1">กำไรเฉลี่ยต่อหน่วย</div>
+                    <div id="eff-ppu" class="text-lg font-bold text-emerald-600">-</div>
+                </div>
+                <div class="card text-center p-4">
+                    <div class="text-sky-800 text-xs font-semibold uppercase mb-1">ยอดขายเฉลี่ยต่อใบเสร็จ</div>
+                    <div id="eff-rpt" class="text-lg font-bold text-blue-700">-</div>
+                </div>
+            </div>
+
+            <!-- บทสรุปสำหรับผู้บริหาร -->
+            <div class="card bg-sky-50/70 border border-sky-200">
+                <h3 class="text-lg font-bold text-sky-950 mb-3 flex items-center gap-2">
+                    <i data-lucide="file-text" class="w-5 h-5 text-sky-600"></i> บทสรุปสำหรับผู้บริหาร
+                </h3>
+                <p id="executive-summary" class="text-sky-900 leading-relaxed text-sm lg:text-base">
+                    <!-- กำหนดโดย JavaScript -->
+                </p>
+            </div>
+        </section>
+
+        <!-- ส่วนที่ 7: ตารางรายการขายทั้งหมด -->
+        <section id="transactions">
+            <h2 class="text-xl font-bold text-sky-950 mb-4 flex items-center gap-2">
+                <i data-lucide="list" class="w-5 h-5 text-sky-600"></i> ตารางรายการขายทั้งหมด
+            </h2>
+            <div class="card">
+                <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="search-tx" placeholder="ค้นหารหัสรายการ, สินค้า, สาขา, หมวดหมู่..."
+                            class="text-sm w-72">
+                    </div>
+                    <button id="btn-export" class="btn">
+                        <i data-lucide="download" class="w-4 h-4"></i> ส่งออกไฟล์ CSV
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table class="w-full text-sm text-left whitespace-nowrap" id="table-transactions">
+                        <thead>
+                            <tr>
+                                <th data-sort="id">รหัสรายการ</th>
+                                <th data-sort="date">วันที่</th>
+                                <th data-sort="branch">สาขา</th>
+                                <th data-sort="product">สินค้า</th>
+                                <th data-sort="category">หมวดหมู่</th>
+                                <th data-sort="qty" class="text-right">จำนวนขาย</th>
+                                <th data-sort="price" class="text-right">ราคาต่อหน่วย</th>
+                                <th data-sort="cost" class="text-right">ต้นทุนต่อหน่วย</th>
+                                <th data-sort="rev" class="text-right">รายได้</th>
+                                <th data-sort="total_cost" class="text-right">ต้นทุนรวม</th>
+                                <th data-sort="profit" class="text-right">กำไรขั้นต้น</th>
+                                <th data-sort="margin" class="text-right">อัตรากำไร (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody><!-- กำหนดโดย JavaScript --></tbody>
+                    </table>
+                </div>
+                <div class="flex justify-between items-center mt-4 flex-wrap gap-2">
+                    <div class="text-sm text-sky-800" id="tx-page-info">กำลังแสดงข้อมูล...</div>
+                    <div class="pagination" id="tx-pagination"></div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- ส่วนท้ายหน้าเว็บ (Footer) -->
+    <footer class="bg-sky-950 text-sky-200 py-8 text-center text-sm border-t border-sky-900 mt-12">
+        <div class="max-w-7xl mx-auto px-4">
+            <p class="font-bold text-white mb-2 text-base">แดชบอร์ดวิเคราะห์ยอดขาย</p>
+            <p class="text-sky-300 text-xs">ระบบแสดงผลและวิเคราะห์ข้อมูลเพื่อการตัดสินใจเชิงธุรกิจ</p>
+            <p class="text-sky-400 text-xs mt-1">สร้างจากชุดข้อมูลการขายในไฟล์ Excel</p>
+            <p class="mt-4 text-[11px] text-sky-500">แหล่งข้อมูล: ชุดข้อมูลการขาย</p>
+        </div>
+    </footer>
+
+    <!-- สคริปต์การทำงานของระบบ -->
+    <script src="data.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>
